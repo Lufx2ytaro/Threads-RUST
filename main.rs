@@ -29,28 +29,51 @@
 // }
 
 
-use std::sync::mpsc;
+// use std::sync::mpsc;
+// use std::thread;
+
+// fn main() {
+//     // Создаём канал
+//     let (tx, rx) = mpsc::channel();
+//     let tx1 = tx.clone();
+//     // Передаём tx в новый поток
+
+//     thread::spawn( move || {
+//         let msg = String::from("Привет из потока!");
+//         tx.send(msg).unwrap(); // Отправляем сообщение
+//     });
+
+//     thread::spawn( move || {
+//       let txt = String::from("Hello from thread");
+//       tx1.send(txt).unwrap();
+//     });
+
+//     // Получаем сообщение в главном потоке
+//     let received = rx.recv().unwrap();
+//     let cage = rx.recv().unwrap();
+//     println!("Получено: {}", received);
+//     println!("Catch: {}", cage);
+// }
+
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 fn main() {
-    // Создаём канал
-    let (tx, rx) = mpsc::channel();
-    let tx1 = tx.clone();
-    // Передаём tx в новый поток
+    let counter = Arc::new(Mutex::new(0)); // Общий счётчик
+    let mut handles = vec![];
 
-    thread::spawn( move || {
-        let msg = String::from("Привет из потока!");
-        tx.send(msg).unwrap(); // Отправляем сообщение
-    });
+    for _ in 0..10 {
+        let counter = Arc::clone(&counter);
+        let handle = thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+            *num += 1; // Изменяем данные
+        });
+        handles.push(handle);
+    }
 
-    thread::spawn( move || {
-      let txt = String::from("Hello from thread");
-      tx1.send(txt).unwrap();
-    });
+    for handle in handles {
+        handle.join().unwrap();
+    }
 
-    // Получаем сообщение в главном потоке
-    let received = rx.recv().unwrap();
-    let cage = rx.recv().unwrap();
-    println!("Получено: {}", received);
-    println!("Catch: {}", cage);
+    println!("Итог: {}", *counter.lock().unwrap());
 }
